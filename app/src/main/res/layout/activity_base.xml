@@ -69,13 +69,12 @@
         android:id="@+id/fall_event_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:visibility="invisible">
+        android:visibility="invisible">
 
         <ImageView
             android:id="@+id/fall_event_bitmap"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:src="@tools:sample/avatars"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintDimensionRatio="16:9"
             app:layout_constraintEnd_toEndOf="parent"

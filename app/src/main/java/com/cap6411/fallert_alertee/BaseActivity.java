@@ -29,6 +29,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,7 +41,7 @@ public class BaseActivity extends AppCompatActivity {
     private BarcodeScanner mScanner;
     private EditText mClientDeviceName;
 
-    private LinearLayout mConnectedLayout;
+    private ConstraintLayout mConnectedLayout;
     private ConstraintLayout mFallEventView;
     private ImageView mFallEvenBitmap;
     private TextView mFallEventTitleAndDescription;
@@ -72,6 +73,7 @@ public class BaseActivity extends AppCompatActivity {
             mFallEventView.setVisibility(ConstraintLayout.INVISIBLE);
         });
 
+        mFallertNetworkService = new FallertNetworkService();
         mClientDeviceName = findViewById(R.id.device_name);
         mConnectedLayout = findViewById(R.id.connected_layout);
         mServerListView = findViewById(R.id.servers_list);
@@ -93,28 +95,33 @@ public class BaseActivity extends AppCompatActivity {
             String barDividedIPString = mSharedPreferences.getString("server_ip_addresses", "");
             mServerDevices.addViaBarDividedString(barDividedIPString);
             mConnectedLayout.setVisibility(LinearLayout.VISIBLE);
-            mFallertNetworkService = new FallertNetworkService();
             for(ServerDevice server : mServerDevices.getDevices()) {
                 mFallertNetworkService.startClientThread(server.mLastIP);
             }
         }
 
         mFallertNetworkServiceQueueHandler = new Thread(() -> {
-            while(true) {
-                if(mFallertNetworkService == null) continue;
-                if(FallertNetworkService.mEventQueue.size() == 0) continue;
-                FallertEvent event = FallertNetworkService.mEventQueue.poll();
-                if(event == null) continue;
-                if(event.getEventType() == FallertEvent.FallertEventType.FALL) {
-                    FallertEventFall fallEvent = (FallertEventFall) event;
-                    runOnUiThread(() -> {
-                        mFallEventView.setVisibility(ConstraintLayout.VISIBLE);
-                        mFallEventTitleAndDescription.setText(fallEvent.getTitle() + "\n" + fallEvent.getDescription());
-                        mFallEvenBitmap.setImageBitmap(fallEvent.getBitmap());
-                    });
+            try {
+                while (true) {
+                    if (mFallertNetworkService == null) continue;
+                    if (FallertNetworkService.mEventQueue.size() == 0) continue;
+                    FallertEvent event = FallertNetworkService.mEventQueue.poll();
+                    if (event == null) continue;
+                    if (event.getEventType() == FallertEvent.FallertEventType.FALL) {
+                        FallertEventFall fallEvent = (FallertEventFall) event;
+                        runOnUiThread(() -> {
+                            mFallEventView.setVisibility(ConstraintLayout.VISIBLE);
+                            mFallEventTitleAndDescription.setText(fallEvent.getTitle() + "\n" + fallEvent.getDescription());
+                            mFallEvenBitmap.setImageBitmap(fallEvent.getBitmap());
+                        });
+                    }
                 }
             }
+            catch (Exception e){
+                e.printStackTrace();
+            }
         });
+        mFallertNetworkServiceQueueHandler.start();
     }
 
     @SuppressLint("UnsafeOptInUsageError")
@@ -136,18 +143,19 @@ public class BaseActivity extends AppCompatActivity {
                         mFallertNetworkService.startClientThread(barcode.getRawValue());
                         Context context = getApplicationContext();
                         WifiManager wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-                        String clientIPAddress = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
+                        int ipAddress = wm.getConnectionInfo().getIpAddress();
+                        String clientIPAddress = String.format("%d.%d.%d.%d", (ipAddress & 0xff),(ipAddress >> 8 & 0xff),(ipAddress >> 16 & 0xff),(ipAddress >> 24 & 0xff));
                         SharedPreferences.Editor editor = mSharedPreferences.edit();
                         editor.putString("server_ip_addresses", mServerDevices.getBarDividedString()).apply();
                         editor.putString("client_ip_address", clientIPAddress).apply();
                         editor.putString("client_device_name", mClientDeviceName.getText().toString()).apply();
                         mConnectedLayout.setVisibility(LinearLayout.VISIBLE);
+                        cameraController.clearImageAnalysisAnalyzer();
+                        mScanner.close();
+                        cameraController.unbind();
                     }
                 }).addOnCompleteListener(task -> {
                     image.close();
-                    cameraController.clearImageAnalysisAnalyzer();
-                    mScanner.close();
-                    cameraController.unbind();
                 });
             }
         });
@@ -160,6 +168,7 @@ public class BaseActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         mScanner.close();
+        mFallertNetworkServiceQueueHandler.interrupt();
         SharedPreferences.Editor editor = mSharedPreferences.edit();
         editor.putString("server_ip_addresses", mServerDevices.getBarDividedString()).apply();
         mFallertNetworkService.stopClientThreads();

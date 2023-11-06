@@ -19,9 +19,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FallertAlertee"
         tools:targetApi="31">
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="barcode" />
         <activity
             android:name=".BaseActivity"
             android:exported="true">
