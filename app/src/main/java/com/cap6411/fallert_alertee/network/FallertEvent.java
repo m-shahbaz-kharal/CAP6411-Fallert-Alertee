@@ -1,8 +1,9 @@
-package com.cap6411.fallert_alertee;
+package com.cap6411.fallert_alertee.network;
 
 public class FallertEvent {
     public enum FallertEventType {
-        FALL
+        FALL,
+        INFORMATION
     }
     private FallertEventType mEventType;
     private String mEventTime;

@@ -1,4 +1,4 @@
-package com.cap6411.fallert_alertee;
+package com.cap6411.fallert_alertee.network;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -7,6 +7,7 @@ import android.util.Base64;
 import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 
 public class StringNetwork {
     public static Socket establishConnection(String ipAddress, int port) {
@@ -36,28 +37,38 @@ public class StringNetwork {
             e.printStackTrace();
         }
     }
-    public static void sendString(Socket socket, String string) {
+    public static boolean sendString(Socket socket, String string) {
         try {
-            socket.getOutputStream().write(string.getBytes().length);
+            int length = string.getBytes().length;
+            byte[] lenBytes = ByteBuffer.allocate(4).putInt(length).array();
+            socket.getOutputStream().write(lenBytes);
             socket.getOutputStream().write(string.getBytes());
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
+            try {socket.close();}
+            catch (Exception ignore) {}
+            return false;
         }
     }
     public static String receiveString(Socket socket) {
         try {
-            int length = socket.getInputStream().read();
-            byte[] buffer = new byte[length];
+            byte[] lenBytes = new byte[4];
+            socket.getInputStream().read(lenBytes);
+            byte[] buffer = new byte[ByteBuffer.wrap(lenBytes).getInt()];
             int read = socket.getInputStream().read(buffer);
             return new String(buffer);
         } catch (Exception e) {
             e.printStackTrace();
+            try {
+                socket.close();
+            } catch (Exception ignore) {}
             return null;
         }
     }
 
     public static String BitMapToString(Bitmap bitmap){
-        ByteArrayOutputStream baos=new  ByteArrayOutputStream();
+        ByteArrayOutputStream baos = new  ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG,100, baos);
         byte [] b=baos.toByteArray();
         return Base64.encodeToString(b, Base64.DEFAULT);

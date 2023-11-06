@@ -1,4 +1,4 @@
-package com.cap6411.fallert_alertee;
+package com.cap6411.fallert_alertee.devices;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -8,14 +8,19 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.cap6411.fallert_alertee.R;
+
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 public class ServerListAdapter extends ArrayAdapter<ServerDevice> {
         private Context mContext;
+        private Consumer<String> mOnDeviceDelete;
 
-        public ServerListAdapter(Context context, ArrayList<ServerDevice> devices) {
+        public ServerListAdapter(Context context, ArrayList<ServerDevice> devices, Consumer<String> onDeviceDelete) {
             super(context, 0, devices);
             mContext = context;
+            mOnDeviceDelete = onDeviceDelete;
         }
 
         public View getView(int position, View convertView, ViewGroup parent) {
@@ -32,6 +37,7 @@ public class ServerListAdapter extends ArrayAdapter<ServerDevice> {
             mTitle.setText(device.mTitle + " | " + device.mLastIP);
             mDelete.setOnClickListener(v -> {
                 remove(device);
+                mOnDeviceDelete.accept(device.mLastIP);
                 notifyDataSetChanged();
             });
             // Return the completed view to render on screen

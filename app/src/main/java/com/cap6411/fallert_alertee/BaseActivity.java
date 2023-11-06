@@ -15,7 +15,6 @@ import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.text.format.Formatter;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -23,13 +22,18 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.cap6411.fallert_alertee.devices.ServerDevice;
+import com.cap6411.fallert_alertee.devices.ServerDevices;
+import com.cap6411.fallert_alertee.network.FallertEvent;
+import com.cap6411.fallert_alertee.network.FallertEventFall;
+import com.cap6411.fallert_alertee.network.FallertInformationEvent;
+import com.cap6411.fallert_alertee.network.FallertNetworkService;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
 import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,7 +54,7 @@ public class BaseActivity extends AppCompatActivity {
     private TextView mAddServerButton;
     private ServerDevices mServerDevices;
     private FallertNetworkService mFallertNetworkService;
-    private Thread mFallertNetworkServiceQueueHandler;
+    private Thread mRecievedFallertEventHandler;
 
 
     @SuppressLint("UnsafeOptInUsageError")
@@ -78,7 +82,7 @@ public class BaseActivity extends AppCompatActivity {
         mConnectedLayout = findViewById(R.id.connected_layout);
         mServerListView = findViewById(R.id.servers_list);
         mAddServerButton = findViewById(R.id.add_server);
-        mServerDevices = new ServerDevices(this, mServerListView);
+        mServerDevices = new ServerDevices(this, mServerListView, mFallertNetworkService::removeServer);
         mAddServerButton.setOnClickListener(v -> {
             mConnectedLayout.setVisibility(LinearLayout.INVISIBLE);
             mFallEventView.setVisibility(ConstraintLayout.INVISIBLE);
@@ -93,14 +97,14 @@ public class BaseActivity extends AppCompatActivity {
         if (mSharedPreferences.getString("server_ip_addresses", "").equals("")) scanQRCode();
         else {
             String barDividedIPString = mSharedPreferences.getString("server_ip_addresses", "");
-            mServerDevices.addViaBarDividedString(barDividedIPString);
+            mServerDevices.parse(barDividedIPString);
             mConnectedLayout.setVisibility(LinearLayout.VISIBLE);
             for(ServerDevice server : mServerDevices.getDevices()) {
                 mFallertNetworkService.startClientThread(server.mLastIP);
             }
         }
 
-        mFallertNetworkServiceQueueHandler = new Thread(() -> {
+        mRecievedFallertEventHandler = new Thread(() -> {
             try {
                 while (true) {
                     if (mFallertNetworkService == null) continue;
@@ -115,13 +119,21 @@ public class BaseActivity extends AppCompatActivity {
                             mFallEvenBitmap.setImageBitmap(fallEvent.getBitmap());
                         });
                     }
+                    else if (event.getEventType() == FallertEvent.FallertEventType.INFORMATION) {
+                        FallertInformationEvent serverInformation = (FallertInformationEvent) event;
+                        runOnUiThread(() -> {
+                            mServerDevices.updateDevice(serverInformation.getInformation(), serverInformation.getIPAddress());
+                        });
+                        FallertInformationEvent clientInformation = new FallertInformationEvent(String.valueOf(System.currentTimeMillis()), mSharedPreferences.getString("client_ip_address", "Unknown"), mSharedPreferences.getString("client_device_name", "Unknown"));
+                        mFallertNetworkService.sendSingleEventToServer(serverInformation.getIPAddress(), clientInformation);
+                    }
                 }
             }
             catch (Exception e){
                 e.printStackTrace();
             }
         });
-        mFallertNetworkServiceQueueHandler.start();
+        mRecievedFallertEventHandler.start();
     }
 
     @SuppressLint("UnsafeOptInUsageError")
@@ -138,15 +150,17 @@ public class BaseActivity extends AppCompatActivity {
                             Toast.makeText(this, "Please enter a device name", Toast.LENGTH_SHORT).show();
                             return;
                         }
-                        Barcode barcode = barcodes.get(0);
-                        mServerDevices.addDevice("Retrieving Title ...", barcode.getRawValue());
-                        mFallertNetworkService.startClientThread(barcode.getRawValue());
                         Context context = getApplicationContext();
                         WifiManager wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
                         int ipAddress = wm.getConnectionInfo().getIpAddress();
                         String clientIPAddress = String.format("%d.%d.%d.%d", (ipAddress & 0xff),(ipAddress >> 8 & 0xff),(ipAddress >> 16 & 0xff),(ipAddress >> 24 & 0xff));
+
+                        Barcode barcode = barcodes.get(0);
+                        mFallertNetworkService.startClientThread(barcode.getRawValue());
+                        mServerDevices.addDevice("Unknown", barcode.getRawValue());
+
                         SharedPreferences.Editor editor = mSharedPreferences.edit();
-                        editor.putString("server_ip_addresses", mServerDevices.getBarDividedString()).apply();
+                        editor.putString("server_ip_addresses", mServerDevices.toString()).apply();
                         editor.putString("client_ip_address", clientIPAddress).apply();
                         editor.putString("client_device_name", mClientDeviceName.getText().toString()).apply();
                         mConnectedLayout.setVisibility(LinearLayout.VISIBLE);
@@ -167,10 +181,11 @@ public class BaseActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mScanner.close();
-        mFallertNetworkServiceQueueHandler.interrupt();
+        if (mScanner != null) mScanner.close();
+        if (cameraController != null) cameraController.unbind();
+        mRecievedFallertEventHandler.interrupt();
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putString("server_ip_addresses", mServerDevices.getBarDividedString()).apply();
+        editor.putString("server_ip_addresses", mServerDevices.toString()).apply();
         mFallertNetworkService.stopClientThreads();
     }
 

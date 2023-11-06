@@ -1,4 +1,4 @@
-package com.cap6411.fallert_alertee;
+package com.cap6411.fallert_alertee.devices;
 
 public class ServerDevice {
     public String mTitle;

@@ -1,18 +1,21 @@
-package com.cap6411.fallert_alertee;
+package com.cap6411.fallert_alertee.devices;
 
 import android.content.Context;
 import android.widget.ListView;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class ServerDevices {
     private List<ServerDevice> mDevices;
     private ServerListAdapter mAdapter;
 
-    public ServerDevices(Context context, ListView listView) {
-        mDevices = new ArrayList<ServerDevice>();
-        mAdapter = new ServerListAdapter(context, (ArrayList<ServerDevice>) mDevices);
+    public ServerDevices(Context context, ListView listView, Consumer<String> onDeviceDelete) {
+        mDevices = new ArrayList<>();
+        mAdapter = new ServerListAdapter(context, (ArrayList<ServerDevice>) mDevices, onDeviceDelete);
         listView.setAdapter(mAdapter);
     }
 
@@ -28,6 +31,16 @@ public class ServerDevices {
         mAdapter.notifyDataSetChanged();
     }
 
+    public void updateDevice(String title, String lastIP) {
+        for (ServerDevice device : mDevices) {
+            if (device.mLastIP.equals(lastIP)) {
+                device.mTitle = title;
+                break;
+            }
+        }
+        mAdapter.notifyDataSetChanged();
+    }
+
     public void removeDevice(String ipAddress) {
         for (ServerDevice device : mDevices) {
             if (device.mLastIP.equals(ipAddress)) {
@@ -38,20 +51,21 @@ public class ServerDevices {
         mAdapter.notifyDataSetChanged();
     }
 
-    public void _addViaString(String deviceString) {
-        String[] deviceInfo = deviceString.split(",");
+    public void _parse(String comma_divided_server_string) {
+        String[] deviceInfo = comma_divided_server_string.split(",");
         addDevice(deviceInfo[0], deviceInfo[1]);
     }
 
-    public void addViaBarDividedString(String deviceString) {
-        if(deviceString == null) return;
-        String[] deviceInfo = deviceString.split("\\|");
+    public void parse(String bar_divided_servers_string) {
+        if(bar_divided_servers_string == null) return;
+        String[] deviceInfo = bar_divided_servers_string.split("\\|");
         for (String device : deviceInfo) {
-            _addViaString(device);
+            _parse(device);
         }
     }
-
-    public String getBarDividedString() {
+    @NotNull
+    @Override
+    public String toString() {
         String deviceString = "";
         for (ServerDevice device : mDevices) {
             deviceString += device.mTitle + "," + device.mLastIP + "|";

@@ -1,4 +1,4 @@
-package com.cap6411.fallert_alertee;
+package com.cap6411.fallert_alertee.network;
 
 import android.graphics.Bitmap;
 
@@ -7,8 +7,8 @@ public class FallertEventFall extends FallertEvent{
     private String mDescription = "";
     private Bitmap mBitmap = null;
 
-    public FallertEventFall(FallertEventType eventType, String eventTime, String title, String description, Bitmap bitmap) {
-        super(eventType, eventTime);
+    public FallertEventFall(String eventTime, String title, String description, Bitmap bitmap) {
+        super(FallertEventType.FALL, eventTime);
         mTitle = title;
         mDescription = description;
         mBitmap = bitmap;
@@ -23,12 +23,12 @@ public class FallertEventFall extends FallertEvent{
         return mBitmap;
     }
     public String toString() {
-        return super.toString() + ":" + mTitle + ":" + mDescription + ":" + StringNetwork.BitMapToString(mBitmap);
+        return super.toString() + ":" + mTitle + ":" + mDescription;
     }
     public static FallertEventFall parse(String eventString) {
         String[] eventStringArray = eventString.split(":");
         try {
-            return new FallertEventFall(FallertEventType.FALL, eventStringArray[1], eventStringArray[2], eventStringArray[3], StringNetwork.StringToBitMap(eventStringArray[4]));
+            return new FallertEventFall(eventStringArray[1], eventStringArray[2], eventStringArray[3], null);
         }
         catch (Exception e) {
             e.printStackTrace();
