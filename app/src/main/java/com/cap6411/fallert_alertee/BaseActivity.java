@@ -3,6 +3,7 @@ package com.cap6411.fallert_alertee;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.view.LifecycleCameraController;
 import androidx.camera.view.PreviewView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -15,8 +16,8 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.format.Formatter;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -40,10 +41,15 @@ public class BaseActivity extends AppCompatActivity {
     private EditText mClientDeviceName;
 
     private LinearLayout mConnectedLayout;
+    private ConstraintLayout mFallEventView;
+    private ImageView mFallEvenBitmap;
+    private TextView mFallEventTitleAndDescription;
+    private TextView mFallEventOkay;
     private ListView mServerListView;
     private TextView mAddServerButton;
     private ServerDevices mServerDevices;
     private FallertNetworkService mFallertNetworkService;
+    private Thread mFallertNetworkServiceQueueHandler;
 
 
     @SuppressLint("UnsafeOptInUsageError")
@@ -57,15 +63,23 @@ public class BaseActivity extends AppCompatActivity {
         }
 
         mPreviewView = findViewById(R.id.qr_code_scan_surface);
+
+        mFallEventView = findViewById(R.id.fall_event_view);
+        mFallEvenBitmap = findViewById(R.id.fall_event_bitmap);
+        mFallEventTitleAndDescription = findViewById(R.id.fall_event_title_and_description);
+        mFallEventOkay = findViewById(R.id.fall_event_okay);
+        mFallEventOkay.setOnClickListener(v -> {
+            mFallEventView.setVisibility(ConstraintLayout.INVISIBLE);
+        });
+
         mClientDeviceName = findViewById(R.id.device_name);
-
         mConnectedLayout = findViewById(R.id.connected_layout);
-
         mServerListView = findViewById(R.id.servers_list);
         mAddServerButton = findViewById(R.id.add_server);
         mServerDevices = new ServerDevices(this, mServerListView);
         mAddServerButton.setOnClickListener(v -> {
             mConnectedLayout.setVisibility(LinearLayout.INVISIBLE);
+            mFallEventView.setVisibility(ConstraintLayout.INVISIBLE);
             mClientDeviceName.setText(Settings.Global.getString(getContentResolver(), "device_name"));
             mFallertNetworkService.stopClientThreads();
             scanQRCode();
@@ -84,6 +98,23 @@ public class BaseActivity extends AppCompatActivity {
                 mFallertNetworkService.startClientThread(server.mLastIP);
             }
         }
+
+        mFallertNetworkServiceQueueHandler = new Thread(() -> {
+            while(true) {
+                if(mFallertNetworkService == null) continue;
+                if(FallertNetworkService.mEventQueue.size() == 0) continue;
+                FallertEvent event = FallertNetworkService.mEventQueue.poll();
+                if(event == null) continue;
+                if(event.getEventType() == FallertEvent.FallertEventType.FALL) {
+                    FallertEventFall fallEvent = (FallertEventFall) event;
+                    runOnUiThread(() -> {
+                        mFallEventView.setVisibility(ConstraintLayout.VISIBLE);
+                        mFallEventTitleAndDescription.setText(fallEvent.getTitle() + "\n" + fallEvent.getDescription());
+                        mFallEvenBitmap.setImageBitmap(fallEvent.getBitmap());
+                    });
+                }
+            }
+        });
     }
 
     @SuppressLint("UnsafeOptInUsageError")

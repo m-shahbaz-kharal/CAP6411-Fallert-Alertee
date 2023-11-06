@@ -5,13 +5,13 @@ import android.graphics.Bitmap;
 public class FallertEventFall extends FallertEvent{
     private String mTitle = "";
     private String mDescription = "";
-    private Bitmap mFallImage = null;
+    private Bitmap mBitmap = null;
 
-    public FallertEventFall(FallertEventType eventType, String eventTime, String title, String description, Bitmap fallImage) {
+    public FallertEventFall(FallertEventType eventType, String eventTime, String title, String description, Bitmap bitmap) {
         super(eventType, eventTime);
         mTitle = title;
         mDescription = description;
-        mFallImage = fallImage;
+        mBitmap = bitmap;
     }
     public String getTitle() {
         return mTitle;
@@ -19,11 +19,11 @@ public class FallertEventFall extends FallertEvent{
     public String getDescription() {
         return mDescription;
     }
-    public Bitmap getFallImage() {
-        return mFallImage;
+    public Bitmap getBitmap() {
+        return mBitmap;
     }
     public String toString() {
-        return super.toString() + ":" + mTitle + ":" + mDescription + ":" + StringNetwork.BitMapToString(mFallImage);
+        return super.toString() + ":" + mTitle + ":" + mDescription + ":" + StringNetwork.BitMapToString(mBitmap);
     }
     public static FallertEventFall parse(String eventString) {
         String[] eventStringArray = eventString.split(":");
