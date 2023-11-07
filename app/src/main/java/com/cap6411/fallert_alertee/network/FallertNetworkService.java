@@ -14,6 +14,7 @@ public class FallertNetworkService {
     public static final int SERVER_RECV_PORT = 3256;
     private Dictionary<String, Thread> mReceiverThreads = new Hashtable<>();
     public static Queue<FallertEvent> mEventQueue = new LinkedList<>();
+    public static boolean mIsClientProcessing = false;
 
     public FallertNetworkService(){}
     public void startClientThread(String serverIPAddress) {
@@ -27,8 +28,11 @@ public class FallertNetworkService {
                     String eventType = msgString.split(":")[0];
                     switch (eventType) {
                         case "FALL":
-                            FallertEventFall fallEvent = FallertEventFall.parse(msgString);
-                            if (fallEvent != null) mEventQueue.add(fallEvent);
+                            if(!FallertNetworkService.mIsClientProcessing) {
+                                FallertEventFall fallEvent = FallertEventFall.parse(msgString);
+                                if (fallEvent != null) mEventQueue.add(fallEvent);
+                                FallertNetworkService.mIsClientProcessing = true;
+                            }
                             break;
                         case "INFORMATION":
                             FallertInformationEvent infoEvent = FallertInformationEvent.parse(msgString);

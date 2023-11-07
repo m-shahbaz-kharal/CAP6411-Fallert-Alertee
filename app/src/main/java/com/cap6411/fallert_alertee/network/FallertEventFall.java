@@ -23,16 +23,11 @@ public class FallertEventFall extends FallertEvent{
         return mBitmap;
     }
     public String toString() {
-        return super.toString() + ":" + mTitle + ":" + mDescription;
+        return super.toString() + ":" + mTitle + ":" + mDescription + ":" + StringNetwork.bitmapToSTring(mBitmap);
     }
     public static FallertEventFall parse(String eventString) {
         String[] eventStringArray = eventString.split(":");
-        try {
-            return new FallertEventFall(eventStringArray[1], eventStringArray[2], eventStringArray[3], null);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        if (eventStringArray.length != 5) return null;
+        return new FallertEventFall(eventStringArray[1], eventStringArray[2], eventStringArray[3], StringNetwork.stringToBitmap(eventStringArray[4]));
     }
 }

@@ -12,6 +12,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -46,12 +48,12 @@ public class BaseActivity extends AppCompatActivity {
     private LifecycleCameraController cameraController;
     private BarcodeScanner mScanner;
     private EditText mClientDeviceName;
-
+    private  ConstraintLayout mQRCodeView;
     private ConstraintLayout mConnectedLayout;
     private ConstraintLayout mFallEventView;
     private ImageView mFallEvenBitmap;
     private TextView mFallEventTitleAndDescription;
-    private TextView mFallEventOkay;
+    private ImageView mFallEventOkay;
     private ListView mServerListView;
     private TextView mAddServerButton;
     private ServerDevices mServerDevices;
@@ -73,6 +75,7 @@ public class BaseActivity extends AppCompatActivity {
         int ipAddress = wm.getConnectionInfo().getIpAddress();
         clientIPAddress = String.format("%d.%d.%d.%d", (ipAddress & 0xff),(ipAddress >> 8 & 0xff),(ipAddress >> 16 & 0xff),(ipAddress >> 24 & 0xff));
 
+        mQRCodeView = findViewById(R.id.qr_code_view);
         mPreviewView = findViewById(R.id.qr_code_scan_surface);
 
         mFallEventView = findViewById(R.id.fall_event_view);
@@ -81,6 +84,7 @@ public class BaseActivity extends AppCompatActivity {
         mFallEventOkay = findViewById(R.id.fall_event_okay);
         mFallEventOkay.setOnClickListener(v -> {
             mFallEventView.setVisibility(ConstraintLayout.INVISIBLE);
+            FallertNetworkService.mIsClientProcessing = false;
         });
 
         mFallertNetworkService = new FallertNetworkService();
@@ -90,8 +94,6 @@ public class BaseActivity extends AppCompatActivity {
         mAddServerButton = findViewById(R.id.add_server);
         mServerDevices = new ServerDevices(this, mServerListView, clientIPAddress, mFallertNetworkService::removeServer);
         mAddServerButton.setOnClickListener(v -> {
-            mConnectedLayout.setVisibility(LinearLayout.INVISIBLE);
-            mFallEventView.setVisibility(ConstraintLayout.INVISIBLE);
             mClientDeviceName.setText(Settings.Global.getString(getContentResolver(), "device_name"));
             mFallertNetworkService.stopClientThreads();
             scanQRCode();
@@ -100,11 +102,13 @@ public class BaseActivity extends AppCompatActivity {
         mSharedPreferences = getSharedPreferences("com.cap6411.fallert_alertee", Context.MODE_PRIVATE);
         mClientDeviceName.setText(mSharedPreferences.getString("client_device_name", Settings.Global.getString(getContentResolver(), "device_name")));
 
-        if (mSharedPreferences.getString("server_ip_addresses", "").equals("")) scanQRCode();
+        if (mSharedPreferences.getString("server_ip_addresses", "").equals("")) {
+            scanQRCode();
+        }
         else {
+            mQRCodeView.setVisibility(ConstraintLayout.INVISIBLE);
             String barDividedIPString = mSharedPreferences.getString("server_ip_addresses", "");
             mServerDevices.parse(barDividedIPString);
-            mConnectedLayout.setVisibility(LinearLayout.VISIBLE);
             for(ServerDevice server : mServerDevices.getDevices()) {
                 mFallertNetworkService.startClientThread(server.mLastIP);
             }
@@ -124,6 +128,7 @@ public class BaseActivity extends AppCompatActivity {
                             mFallEventTitleAndDescription.setText(fallEvent.getTitle() + "\n" + fallEvent.getDescription());
                             mFallEvenBitmap.setImageBitmap(fallEvent.getBitmap());
                         });
+                        new ToneGenerator(AudioManager.STREAM_MUSIC, 100).startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT,1000);
                     }
                     else if (event.getEventType() == FallertEvent.FallertEventType.INFORMATION) {
                         FallertInformationEvent serverInformation = (FallertInformationEvent) event;
@@ -150,6 +155,7 @@ public class BaseActivity extends AppCompatActivity {
 
     @SuppressLint("UnsafeOptInUsageError")
     private void scanQRCode(){
+        mQRCodeView.setVisibility(ConstraintLayout.VISIBLE);
         cameraController = new LifecycleCameraController(this);
         BarcodeScannerOptions options = new BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build();
         mScanner = BarcodeScanning.getClient(options);
@@ -171,13 +177,15 @@ public class BaseActivity extends AppCompatActivity {
                         editor.putString("server_ip_addresses", mServerDevices.toString()).apply();
                         editor.putString("client_ip_address", clientIPAddress).apply();
                         editor.putString("client_device_name", mClientDeviceName.getText().toString()).apply();
-                        mConnectedLayout.setVisibility(LinearLayout.VISIBLE);
-                        cameraController.clearImageAnalysisAnalyzer();
-                        mScanner.close();
+
+                        mQRCodeView.setVisibility(ConstraintLayout.INVISIBLE);
                         cameraController.unbind();
+                        mScanner.close();
+                        cameraController.clearImageAnalysisAnalyzer();
                     }
-                }).addOnCompleteListener(task -> {
-                    image.close();
+                    else {
+                        image.close();
+                    }
                 });
             }
         });
@@ -185,7 +193,12 @@ public class BaseActivity extends AppCompatActivity {
         cameraController.bindToLifecycle(this);
         mPreviewView.setController(cameraController);
     }
-
+    @Override
+    public void onPause() {
+        super.onPause();
+        SharedPreferences.Editor editor = mSharedPreferences.edit();
+        editor.putString("server_ip_addresses", mServerDevices.toString()).apply();
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();

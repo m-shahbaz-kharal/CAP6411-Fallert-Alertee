@@ -6,41 +6,13 @@
     android:layout_height="match_parent"
     tools:context=".BaseActivity">
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/qr_code_scan_surface"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-    </androidx.camera.view.PreviewView>
-
-    <EditText
-        android:id="@+id/device_name"
-        android:layout_width="0dp"
-        android:layout_height="48dp"
-        android:layout_marginLeft="8pt"
-        android:layout_marginRight="8pt"
-        android:layout_marginBottom="16pt"
-        android:inputType="text"
-        android:text="Name"
-        android:textAlignment="center"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/connected_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/white"
         android:gravity="center_horizontal|center_vertical"
-        android:orientation="vertical"
-        android:visibility="invisible">
+        android:orientation="vertical">
 
         <ListView
             android:id="@+id/servers_list"
@@ -66,6 +38,41 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/qr_code_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:visibility="invisible">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/qr_code_scan_surface"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+        </androidx.camera.view.PreviewView>
+
+        <EditText
+            android:id="@+id/device_name"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginLeft="8pt"
+            android:layout_marginRight="8pt"
+            android:layout_marginBottom="16pt"
+            android:inputType="text"
+            android:text="Name"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/fall_event_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -82,21 +89,22 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
+        <ImageView
             android:id="@+id/fall_event_okay"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:background="@color/purple_700"
             android:gravity="center"
-            android:text="Okay"
+            android:padding="8dp"
             android:textColor="@color/white"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent" />
+            app:layout_constraintLeft_toRightOf="@id/fall_event_title_and_description"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@android:drawable/ic_menu_close_clear_cancel" />
 
         <TextView
             android:id="@+id/fall_event_title_and_description"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="48dp"
             android:background="@android:color/holo_red_dark"
             android:text="Title: "
@@ -104,7 +112,7 @@
             android:textColor="@color/white"
             android:textStyle="bold"
             app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintRight_toLeftOf="@id/fall_event_okay"
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
