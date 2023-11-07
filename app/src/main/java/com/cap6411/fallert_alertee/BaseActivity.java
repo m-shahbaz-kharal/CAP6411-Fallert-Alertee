@@ -28,6 +28,7 @@ import com.cap6411.fallert_alertee.network.FallertEvent;
 import com.cap6411.fallert_alertee.network.FallertEventFall;
 import com.cap6411.fallert_alertee.network.FallertInformationEvent;
 import com.cap6411.fallert_alertee.network.FallertNetworkService;
+import com.cap6411.fallert_alertee.network.FallertRemoveDeviceEvent;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
 import com.google.mlkit.vision.barcode.BarcodeScanning;
@@ -40,6 +41,7 @@ import java.util.List;
 public class BaseActivity extends AppCompatActivity {
     int PERMISSION_REQUESTS = 1;
     private SharedPreferences mSharedPreferences;
+    private String clientIPAddress;
     private PreviewView mPreviewView;
     private LifecycleCameraController cameraController;
     private BarcodeScanner mScanner;
@@ -67,6 +69,10 @@ public class BaseActivity extends AppCompatActivity {
             getRuntimePermissions();
         }
 
+        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        int ipAddress = wm.getConnectionInfo().getIpAddress();
+        clientIPAddress = String.format("%d.%d.%d.%d", (ipAddress & 0xff),(ipAddress >> 8 & 0xff),(ipAddress >> 16 & 0xff),(ipAddress >> 24 & 0xff));
+
         mPreviewView = findViewById(R.id.qr_code_scan_surface);
 
         mFallEventView = findViewById(R.id.fall_event_view);
@@ -82,7 +88,7 @@ public class BaseActivity extends AppCompatActivity {
         mConnectedLayout = findViewById(R.id.connected_layout);
         mServerListView = findViewById(R.id.servers_list);
         mAddServerButton = findViewById(R.id.add_server);
-        mServerDevices = new ServerDevices(this, mServerListView, mFallertNetworkService::removeServer);
+        mServerDevices = new ServerDevices(this, mServerListView, clientIPAddress, mFallertNetworkService::removeServer);
         mAddServerButton.setOnClickListener(v -> {
             mConnectedLayout.setVisibility(LinearLayout.INVISIBLE);
             mFallEventView.setVisibility(ConstraintLayout.INVISIBLE);
@@ -127,6 +133,12 @@ public class BaseActivity extends AppCompatActivity {
                         FallertInformationEvent clientInformation = new FallertInformationEvent(String.valueOf(System.currentTimeMillis()), mSharedPreferences.getString("client_ip_address", "Unknown"), mSharedPreferences.getString("client_device_name", "Unknown"));
                         mFallertNetworkService.sendSingleEventToServer(serverInformation.getIPAddress(), clientInformation);
                     }
+                    else if (event.getEventType() == FallertEvent.FallertEventType.REMOVE_DEVICE) {
+                        FallertRemoveDeviceEvent removeEvent = (FallertRemoveDeviceEvent) event;
+                        runOnUiThread(() -> {
+                            mServerDevices.removeDevice(removeEvent.getIPAddress());
+                        });
+                    }
                 }
             }
             catch (Exception e){
@@ -150,10 +162,6 @@ public class BaseActivity extends AppCompatActivity {
                             Toast.makeText(this, "Please enter a device name", Toast.LENGTH_SHORT).show();
                             return;
                         }
-                        Context context = getApplicationContext();
-                        WifiManager wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-                        int ipAddress = wm.getConnectionInfo().getIpAddress();
-                        String clientIPAddress = String.format("%d.%d.%d.%d", (ipAddress & 0xff),(ipAddress >> 8 & 0xff),(ipAddress >> 16 & 0xff),(ipAddress >> 24 & 0xff));
 
                         Barcode barcode = barcodes.get(0);
                         mFallertNetworkService.startClientThread(barcode.getRawValue());

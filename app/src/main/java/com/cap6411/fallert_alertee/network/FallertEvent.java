@@ -3,7 +3,8 @@ package com.cap6411.fallert_alertee.network;
 public class FallertEvent {
     public enum FallertEventType {
         FALL,
-        INFORMATION
+        INFORMATION,
+        REMOVE_DEVICE
     }
     private FallertEventType mEventType;
     private String mEventTime;

@@ -1,6 +1,7 @@
 package com.cap6411.fallert_alertee.devices;
 
 import android.content.Context;
+import android.util.Pair;
 import android.widget.ListView;
 
 import org.jetbrains.annotations.NotNull;
@@ -13,9 +14,9 @@ public class ServerDevices {
     private List<ServerDevice> mDevices;
     private ServerListAdapter mAdapter;
 
-    public ServerDevices(Context context, ListView listView, Consumer<String> onDeviceDelete) {
+    public ServerDevices(Context context, ListView listView, String clientIP, Consumer<Pair<String,String>> onDeviceDelete) {
         mDevices = new ArrayList<>();
-        mAdapter = new ServerListAdapter(context, (ArrayList<ServerDevice>) mDevices, onDeviceDelete);
+        mAdapter = new ServerListAdapter(context, (ArrayList<ServerDevice>) mDevices, clientIP, onDeviceDelete);
         listView.setAdapter(mAdapter);
     }
 

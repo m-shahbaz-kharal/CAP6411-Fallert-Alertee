@@ -1,5 +1,7 @@
 package com.cap6411.fallert_alertee.network;
 
+import android.util.Pair;
+
 import java.net.Socket;
 import java.util.Dictionary;
 import java.util.Enumeration;
@@ -32,6 +34,10 @@ public class FallertNetworkService {
                             FallertInformationEvent infoEvent = FallertInformationEvent.parse(msgString);
                             if (infoEvent != null) mEventQueue.add(infoEvent);
                             break;
+                        case "REMOVE_DEVICE":
+                            FallertRemoveDeviceEvent removeEvent = FallertRemoveDeviceEvent.parse(msgString);
+                            if (removeEvent != null) mEventQueue.add(removeEvent);
+                            break;
                     }
 
                 }
@@ -46,8 +52,10 @@ public class FallertNetworkService {
         mReceiverThreads.get(serverIPAddress).start();
     }
 
-    public void removeServer(String serverIP) {
-        mReceiverThreads.get(serverIP).interrupt();
+    public void removeServer(Pair<String, String> server_and_client_IP) {
+        mReceiverThreads.get(server_and_client_IP.first).interrupt();
+        FallertRemoveDeviceEvent removeEvent = new FallertRemoveDeviceEvent(String.valueOf(System.currentTimeMillis()), server_and_client_IP.second);
+        sendSingleEventToServer(server_and_client_IP.first, removeEvent);
     }
 
     public void sendSingleEventToServer(String serverIP, FallertEvent event) {
